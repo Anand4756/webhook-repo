@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Actions Log</title>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        flex-direction: column;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+        color: #4e73df;
+        font-weight: 600;
+      }
+
+      ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        width: 80%;
+        max-width: 800px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      li {
+        margin: 15px 20px;
+        padding: 10px 15px;
+        background-color: #f9fafb;
+        border-left: 5px solid transparent;
+        border-radius: 5px;
+        transition: background-color 0.3s, transform 0.3s;
+      }
+
+      li:hover {
+        background-color: #e9ecef;
+        transform: translateX(10px);
+      }
+
+      .action {
+        font-size: 1.2em;
+        font-weight: 500;
+        color: #495057;
+      }
+
+      .action-time {
+        font-size: 0.9em;
+        color: #6c757d;
+        margin-top: 5px;
+      }
+
+      /* Animations */
+      @keyframes fadeIn {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .action-item {
+        animation: fadeIn 0.5s ease-out;
+      }
+
+      /* Add subtle animation when new items are added */
+      .loading {
+        font-size: 1.2em;
+        color: #007bff;
+        text-align: center;
+        margin-top: 30px;
+      }
+
+      .refresh-btn {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #4e73df;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1.1em;
+        transition: background-color 0.3s;
+      }
+
+      .refresh-btn:hover {
+        background-color: #2e59d9;
+      }
+
+      .refresh-btn:focus {
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>GitHub Actions Log</h1>
+    <ul id="actionsList">
+      <!-- Action items will be populated here -->
+    </ul>
+    <script>
+      // Function to fetch the actions from the Flask API
+      async function fetchActions() {
+        try {
+          const response = await fetch("http://localhost:5000/webhook/actions");
+          const actions = await response.json();
+
+          const actionsList = document.getElementById("actionsList");
+          actionsList.innerHTML = "";
+
+          if (actions.length === 0) {
+            actionsList.innerHTML =
+              '<li class="loading">No actions found. Try refreshing!</li>';
+          }
+
+          actions.forEach((action) => {
+            const listItem = document.createElement("li");
+            listItem.classList.add("action-item");
+
+            let actionText = "";
+            let actionTime = "";
+
+            if (action.action === "PUSH") {
+              actionText = `${action.author} pushed to ${action.to_branch}`;
+            } else if (action.action === "PULL_REQUEST") {
+              actionText = `${action.author} submitted a pull request from ${action.from_branch} to ${action.to_branch}`;
+            } else if (action.action === "MERGE") {
+              actionText = `${action.author} merged branch ${action.from_branch} to ${action.to_branch}`;
+            }
+
+            const actionElement = document.createElement("div");
+            actionElement.classList.add("action");
+            actionElement.textContent = actionText;
+
+            actionTime = new Date(action.timestamp).toUTCString();
+            const timeElement = document.createElement("div");
+            timeElement.classList.add("action-time");
+            timeElement.textContent = `On: ${actionTime}`;
+
+            listItem.appendChild(actionElement);
+            listItem.appendChild(timeElement);
+            actionsList.appendChild(listItem);
+          });
+        } catch (error) {
+          console.error("Error fetching actions:", error);
+        }
+      }
+
+      window.onload = fetchActions;
+
+      // Refresh actions every 15 seconds
+      setInterval(fetchActions, 15000);
+    </script>
+  </body>
+</html>

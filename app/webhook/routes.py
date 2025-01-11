@@ -35,11 +35,11 @@ def extract_pull_request_action(data):
 
 def extract_merge_action(data):
     """Extracts action data for merge events."""
-    author = data["committer"]["name"]
-    from_branch = data["merge"]["head"]["ref"]
-    to_branch = data["merge"]["base"]["ref"]
+    author = data["pull_request"]["merged_by"]['login']
+    from_branch = data['pull_request']['head']['label'].split(':')[-1],
+    to_branch = data['pull_request']['base']['label'].split(':')[-1],
     timestamp = datetime.now(timezone.utc).isoformat()
-    return create_action_data("MERGE", author, data["merge"]["id"], from_branch, to_branch, timestamp)
+    return create_action_data("MERGE", author, data['pull_request']['id'], from_branch, to_branch, timestamp)
 
 @webhook.route('/')
 def index():
@@ -56,9 +56,12 @@ def webhook_receive():
         if "pusher" in data:
             action_data = extract_push_action(data)
         elif "pull_request" in data:
-            action_data = extract_pull_request_action(data)
-        elif "merge" in data:
-            action_data = extract_merge_action(data)
+            if data["pull_request"].get("merged_by") is not None:
+                # Handle merge action
+                action_data = extract_merge_action(data)
+            else:
+                # Handle regular pull request action
+                action_data = extract_pull_request_action(data)
         else:
             return jsonify({"error": "Unhandled event type"}), 400
 
